@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Generator</title>
+    <style>
+        /* ... (CSS from previous response) ... */
+        body {
+            font-family: 'Montserrat', sans-serif; /* Modern font */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6dd5ed, #2193b0); /* Gradient background */
+            color: #333; /* Dark text for readability */
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            margin: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h2, h3 {
+            color: #2c3e50; /* Darker header color */
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600; /* Semi-bold label */
+            color: #34495e;
+        }
+
+        input, select {
+            width: calc(100% - 22px);
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: #3498db; /* Blue focus color */
+            outline: none;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 14px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            width: 70px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container" id="inputScreen">
+        <h2>Enter Customer Details</h2>
+        <label for="customerName">Customer Name:</label>
+        <input type="text" id="customerName">
+        <label for="month">Select Month:</label>
+        <select id="month">
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+        </select>
+        <button onclick="showCalendar(event)">Submit</button>
+    </div>
+
+    <div class="container hidden" id="calendarScreen">
+        <h2 id="calendarTitle"></h2>
+        <table id="calendarTable">
+            <thead>
+                <tr>
+                    <th>Sun</th>
+                    <th>Mon</th>
+                    <th>Tue</th>
+                    <th>Wed</th>
+                    <th>Thu</th>
+                    <th>Fri</th>
+                    <th>Sat</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <button onclick="generateBill()">Generate Bill</button>
+    </div>
+
+    <div class="container hidden" id="billScreen">
+        <h2 id="billCustomerName"></h2>
+        <h3 id="billMonth"></h3>
+        <table id="billTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Quantity</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <h3 id="billTotal"></h3>
+        <button onclick="downloadPDF()">Download PDF</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script>
+        //... JavaScript code
+        let customerName, selectedMonth, daysInMonth, quantities = {};
+
+        function showCalendar(event) {
+            customerName = document.getElementById("customerName").value;
+            selectedMonth = parseInt(document.getElementById("month").value);
+            daysInMonth = new Date(new Date().getFullYear(), selectedMonth + 1, 0).getDate();
+
+            event.preventDefault();
+
+            document.getElementById("inputScreen").classList.add("hidden");
+            document.getElementById("calendarScreen").classList.remove("hidden");
+            document.getElementById("calendarTitle").textContent = `${getMonthName(selectedMonth)} Calendar`;
+
+            generateCalendar();
+        }
+
+        function generateCalendar() {
+            const tableBody = document.getElementById("calendarTable").getElementsByTagName("tbody")[0];
+            tableBody.innerHTML = "";
+
+            const firstDay = new Date(new Date().getFullYear(), selectedMonth, 1).getDay();
+            let dayCounter = 1;
+
+            for (let i = 0; i < 6; i++) {
+                const row = tableBody.insertRow();
+                for (let j = 0; j < 7; j++) {
+                    if (i === 0 && j < firstDay) {
+                        row.insertCell().textContent = "";
+                    } else if (dayCounter <= daysInMonth) {
+                        const cell = row.insertCell();
+                        cell.textContent = dayCounter;
+                        cell.innerHTML = `${dayCounter}<br><input type="number" step="0.5" id="qty-${dayCounter}" placeholder="Qty">`;
+                        dayCounter++;
+                    } else {
+                        row.insertCell().textContent = "";
+                    }
+                }
+                if (dayCounter > daysInMonth) break;
+            }
+        }
+
+        function getMonthName(monthIndex) {
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            return months[monthIndex];
+        }
+
+        function generateBill() {
+            quantities = {};
+            for (let i = 1; i <= daysInMonth; i++) {
+                const qtyInput = document.getElementById(`qty-${i}`);
+                if (qtyInput && qtyInput.value !== "") {
+                    quantities[i] = parseFloat(qtyInput.value);
+                }
+            }
+            document.getElementById("calendarScreen").classList.add("hidden");
+            document.getElementById("billScreen").classList.remove("hidden");
+
+            document.getElementById("billCustomerName").textContent = `Customer: ${customerName}`;
+            document.getElementById("billMonth").textContent = `Month: ${getMonthName(selectedMonth)}`;
+
+            generateBillTable();
+        }
+
+        function generateBillTable() {
+            const tableBody = document.getElementById("billTable").getElementsByTagName("tbody")[0];
+            tableBody.innerHTML = "";
+
+            let totalBill = 0;
+            for (let i = 1; i <= daysInMonth; i++) {
+                const quantity = quantities[i] !== undefined ? quantities[i] : 0;
+                const amount = quantity * 60;
+                const row = tableBody.insertRow();
+                row.insertCell().textContent = i;
+                row.insertCell().textContent = quantity;
+                row.insertCell().textContent = amount;
+                totalBill += amount;
+            }
+
+            document.getElementById("billTotal").textContent = `Total Bill: ${totalBill} Rs`;
+        }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`Customer: ${customerName}`, 10, 10);
+            doc.text(`Month: ${getMonthName(selectedMonth)}`, 10, 20);
+
+            let y = 40;
+            doc.text("Date\tQuantity\tAmount", 10, y);
+            y += 10;
+
+            let totalBill = 0;
+            for (let i = 1; i <= daysInMonth; i++) {
+                const quantity = quantities[i] !== undefined ? quantities[i] : 0;
+                const amount = quantity * 60;
+                doc.text(`${i}\t${quantity}\t${amount}`, 10, y);
+                y += 10;
+                totalBill += amount;
+            }
+
+            doc.text(`Total Bill: ${totalBill} Rs`, 10, y + 10);
+            doc.save("bill.pdf");
+        }
+    </script>
+</body>
+</html>
